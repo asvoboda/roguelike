@@ -1,4 +1,4 @@
-# Simple Multiplayer Rougelike
+# Simple Multiplayer Totally Intentionally Mispelled Roguelike
 
  - Multiple worlds, with unending levels
  - FOV and "Fog of War" style sight

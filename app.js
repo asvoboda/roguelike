@@ -45,6 +45,10 @@ app.get('/', function(req, res) {
 	res.render('index.jade', {world:0});
 });
 
+app.get('/ping', function(req, res) {
+	res.render('ping.jade');
+});
+
 app.get('/:world', function(req, res) {
 	var world = req.params.world;
 	var translated;

@@ -2,7 +2,6 @@ var Player = function(username, x, y, color) {
 	//todo
 	this._x = x;
 	this._y = y;
-	this._draw();
 	this._color = color || '#'+Math.floor(Math.random()*16777215).toString(16); //the magic of 16777215=ffffff
 	this.username = username;
 	this.visibility = 8;
@@ -33,7 +32,9 @@ Player.prototype._fov = function() {
 	var lightPasses = function(x, y) {
 		var key = x+","+y;
 		if (key in Game.map) { 
-			return (Game.map[key].character === Game.tiles.floor.character || Game.map[key].character === Game.tiles.box.character); 
+			return (Game.map[key].character === Game.tiles.floor.character ||
+			 Game.map[key].character === Game.tiles.box.character || 
+			 Game.map[key].character === Game.tiles.stair.character); 
 		}
 		return false;
 	}
@@ -107,7 +108,6 @@ Player.prototype._handle = function(code) {
 
 	this._fov();
 	this._draw();
-	
 
 	sockets.emit('move', {'x': newX, 'y': newY});
 };

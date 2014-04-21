@@ -42,10 +42,22 @@ if ('development' == app.get('env')) {
 }
 
 app.get('/', function(req, res) {
-	res.render('index.jade');
+	res.render('index.jade', {world:0});
 });
 
-var dimensions = [[1397772122914]];
+app.get('/:world', function(req, res) {
+	var world = req.params.world;
+	var translated;
+	//split a string into each character by ascii char codetloc for the world seed
+	if (!isNaN(parseFloat(world)) && isFinite(world)) {
+		translated = world;
+	} else {
+		translated = _un.map(world.split(""), function(ch) { return ch.charCodeAt(); }).join("");
+	}
+	res.render('index.jade', {world:translated});
+});
+
+var dimensions = {1397772122914: [1397772122914], 97623758228496: [97623758228496, 63119805283845]};
 var users = {};
 
 io.on('connection', function(socket){
@@ -56,7 +68,7 @@ io.on('connection', function(socket){
 
 	socket.on('finishLevel', function() {
 		//Pick the next level (or generate it) from the 2d dimensions array
-		//[[1, 2, 3], [4, 5, 6]]
+		//{[1, 2, 3], [4, 5, 6]}
 		//so if the player is on world 1, pick 2. If they are on 5, pick 6... and generate a new one if necessary
 		var val = socket.world;
 		var chosen = _un.find(dimensions, function(worlds) {
@@ -75,9 +87,9 @@ io.on('connection', function(socket){
 		} else {
 			newWorld = _un.random(1000000000000, 100000000000000);
 			//gen new world seed, push to dimensions
-			var worldsIndex = _un.indexOf(dimensions, chosen);
+			var worldKey = chosen[0];
 			chosen.push(newWorld);
-			dimensions[worldsIndex] = chosen;
+			dimensions[worldKey] = chosen;
 		}
 		io.sockets.in(socket.world).emit('disconnect', socket.username);
 		socket.leave(socket.world);
@@ -88,25 +100,35 @@ io.on('connection', function(socket){
 		console.log(dimensions);
 	});
 
-	socket.on('seed', function() {
-		var world = _un.sample(dimensions)[0];
+	socket.on('seed', function(askingWorld) {
+		var world;
+		console.log("client asks for world: " + askingWorld);
+		if (askingWorld) {
+			dimensions[askingWorld] = [askingWorld];
+			world = askingWorld;
+		} else {
+			world = _un.sample(dimensions)[0];
+		}
+		console.log("client gets world: " + world);
 		socket.join(world);
 		socket.world = world;
 		socket.emit('init', {seed: world});	
+	});
+
+	socket.on('getOtherUsers', function(username) {
+		//send all existing users in the world to the new player
+		var others = _un.filter(users, function(user) {
+			return (user.world === socket.world && user.username !== username);
+		});
+		socket.emit('others', others);
 	});
 
 	socket.on('addUser', function(username, x, y, color) {
 		socket.username = username;
 		var newPlayer = {"username": username, "x": x, "y": y, "color": color, "world": socket.world};
 		users[username] = newPlayer;
-		socket.emit('start');
-		socket.broadcast.to(socket.world).emit('addUser', newPlayer);
 
-		//send all existing users in the world as well!
-		var others = _un.filter(users, function(user) {
-			return (user.world === socket.world && user.username !== username);
-		});
-		socket.emit('others', others);
+		socket.broadcast.to(socket.world).emit('addUser', newPlayer);
 	});
 
 	socket.on('move', function(data) {
@@ -114,9 +136,9 @@ io.on('connection', function(socket){
 		var player = users[socket.username];
 		player.x = data.x;
 		player.y = data.y
-		users[data.username] = player;
+		users[socket.username] = player;
 		//broadcast information to rest of players in world
-		io.sockets.in(socket.world).emit('move', {"username": socket.username, "x": data.x, "y": data.y});
+		io.sockets.in(socket.world).emit('move', {"u": socket.username, "x": data.x, "y": data.y});
 	});
 
 	socket.on('disconnect', function(){

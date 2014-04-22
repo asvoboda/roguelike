@@ -149,9 +149,10 @@ io.on('connection', function(socket) {
 		var player = users[socket.username];
 		player.x = data.x;
 		player.y = data.y
+		player.tick = data.t;
 		users[socket.username] = player;
 		//broadcast information to rest of players in world
-		io.sockets.in(socket.world).emit('move', {"u": socket.username, "x": data.x, "y": data.y});
+		io.sockets.in(socket.world).emit('move', {"u": socket.username, "x": data.x, "y": data.y, "t": data.t});
 	});
 
 	socket.on('disconnect', function(){

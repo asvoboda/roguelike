@@ -56,6 +56,7 @@ $(document).ready(function () {
 		if (player === undefined) return;
 		player.setX(msg.x);
 		player.setY(msg.y);
+		player.tick = msg.t;
 
 		//only draw the fov for the person who is playing
 		Game.player._fov();

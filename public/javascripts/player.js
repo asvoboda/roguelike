@@ -5,6 +5,7 @@ var Player = function(username, x, y, color) {
 	this._color = color || '#'+Math.floor(Math.random()*16777215).toString(16); //the magic of 16777215=ffffff
 	this.username = username;
 	this.visibility = 8;
+	this.tick = false;
 };
 
 Player.prototype.getX = function() { return this._x; };
@@ -46,17 +47,8 @@ Player.prototype._removeFov = function() {
 		var tile = _.find(Game.tiles, function(t) {
 			return t.character === character;
 		});
-		var other = _.find(Game.others, function(other) {
-			return (x === other.getX() && y === other.getY());
-		});
 
-		var ch;
-		var color;
-		if (other) {
-			ch = Game.tiles.player.character;
-		} else {
-			ch = (r ? tile.character : Game.tiles.player.character);
-		}
+		var ch = (r ? tile.character : Game.tiles.player.character);
 		Game.display.draw(x, y, ch, "#555");
 	});
 };
@@ -74,12 +66,18 @@ Player.prototype._fov = function() {
 		var other = _.find(Game.others, function(other) {
 			return (x === other.getX() && y === other.getY());
 		});
+		var enemy = _.find(Game.enemies, function(enemy) {
+			return (x === enemy.getX() && y === enemy.getY());
+		});
 
 		var ch;
 		var color;
 		if (other) {
 			ch = Game.tiles.player.character;
 			color = other.getColor();
+		} else if (enemy) {
+			ch = Game.tiles.enemy.character;
+			color = enemy.getColor();
 		} else {
 			ch = (r ? tile.character : Game.tiles.player.character);
 			color = (r ? tile.color : Game.player.getColor());
@@ -87,7 +85,27 @@ Player.prototype._fov = function() {
 		Game.display.draw(x, y, ch, color);
 		Game.map[key].viewed = true;
 	});
+};
 
+//check all entities in the fov for the player
+//if they have all moved, then so can the player
+//entities outside the fov can move at will
+Player.prototype._canTick = function() {
+	var fov = new ROT.FOV.PreciseShadowcasting(_lightPasses);
+	var canTick = true;
+
+	/* output callback */
+	fov.compute(this._x, this._y, this.visibility, function(x, y, r, visibility) {
+
+		var other = _.find(Game.others, function(other) {
+			return (x === other.getX() && y === other.getY());
+		});
+		if (other) {
+			canTick = (other.tick && !this.tick);
+		}
+	});
+
+	return canTick;
 };
 
 Player.prototype._handle = function(code) {
@@ -113,6 +131,10 @@ Player.prototype._handle = function(code) {
 		return;
 	}
 
+	if (!this._canTick()) {
+		return;
+	}
+
 	var otherInWay = false;
 	_.each(Game.others, function(other) {
 		var key = other.getX() + "," + other.getY();
@@ -128,8 +150,9 @@ Player.prototype._handle = function(code) {
 	this._removeFov();
 	this._x = newX;
 	this._y = newY;
+	this.tick = true;
 
-	sockets.emit('move', {'x': newX, 'y': newY});
+	sockets.emit('move', {'x': newX, 'y': newY, 't': this.tick});
 
 	this._fov();
 	this._draw();
@@ -143,3 +166,8 @@ Player.prototype._check = function() {
 		//todo: do something with boxes, doors, etc
 	}
 };
+
+var resetTick = function() {
+	Game.player.tick = false;
+	setTimeout(resetTick, Game.tickAmount);
+}

@@ -3,17 +3,20 @@ var Game = {
 	map: {},
 	player: null,
 	others: {},
+	enemies: [],
 	engine: null,
 	scheduler: null,
 	stair: null,
 	displayWidth: 80,
 	displayHeight: 25,
+	tickAmount: 10000,
 	tiles: {
 		"stair": {"color": "#fff", "character": "⇓"},
 		"floor": {"color": "#f7bf8f", "character": "."},
 		"box": {"color": "#f46065", "character": "¤"},
 		"wall": {"color": "#614126", "character": "#"},
 		"player": {"color": "", "character": "@"},
+		"enemy": {"color": "", "character": "P"},
 	},
 	clear: function() {
 		this.map = {};
@@ -28,6 +31,7 @@ var Game = {
 		}
 		document.body.appendChild(this.display.getContainer());
 		this._generateMap();
+		resetTick();
 	}
 };
 
@@ -58,6 +62,10 @@ Game._generateMap = function() {
 	}
 
 	this._createPlayer(freeCells);
+
+	for(var i = 0; i < 1; i++) {
+		this._createEnemy(freeCells);
+	}
 
 	this._drawWholeMap();
 	this.player._fov();
@@ -110,6 +118,17 @@ Game._createPlayer = function(freeCells) {
 	Mousetrap.bind(["up", "right", "down", "left"], movementCallback.bind(this));
 	Mousetrap.bind("enter", enterCallback.bind(this));
 };
+
+Game._createEnemy = function(freeCells) {
+	var index = Math.floor(ROT.RNG.getUniform() * freeCells.length);
+	var key = freeCells.splice(index, 1)[0];
+	var parts = key.split(",");
+	var x = parseInt(parts[0]);
+	var y = parseInt(parts[1]);
+
+	var enemy = new Enemy(username, x, y, this.player.getColor());
+	Game.enemies.push(enemy);
+}
 
 Game.removePlayer = function(username) {
 	var player = Game.others[username];

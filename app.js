@@ -58,9 +58,10 @@ app.get('/:world', function(req, res) {
 	if (!isNaN(parseFloat(world)) && isFinite(world)) {
 		translated = world;
 	} else {
-		translated = parseInt(_un.map(world.split(""), function(ch) { return ch.charCodeAt(); }).join("")) % Number.MAX_SAFE_INTEGER;
+		translated = parseInt(_un.map(world.split(""), function(ch) { return ch.charCodeAt(); }).join("")) % 9007199254740991;
 	}
-	res.render('index.jade', {world:translated});
+	console.log(translated);
+	res.render('index.jade', {world: translated});
 });
 
 var dimensions = {1397772122914: [1397772122914], 97623758228496: [97623758228496, 63119805283845]};

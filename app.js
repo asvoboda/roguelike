@@ -58,7 +58,7 @@ app.get('/:world', function(req, res) {
 	if (!isNaN(parseFloat(world)) && isFinite(world)) {
 		translated = world;
 	} else {
-		translated = _un.map(world.split(""), function(ch) { return ch.charCodeAt(); }).join("");
+		translated = parseInt(_un.map(world.split(""), function(ch) { return ch.charCodeAt(); }).join("")) % Number.MAX_SAFE_INTEGER;
 	}
 	res.render('index.jade', {world:translated});
 });

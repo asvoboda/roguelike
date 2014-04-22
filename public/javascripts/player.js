@@ -22,24 +22,47 @@ Player.prototype._draw = function() {
 };
 
 Player.prototype.act = function() {
-	//if (this.username !== username) return;
-	//Game.engine.lock();
-	//window.addEventListener("keydown", this);
+};
+
+/* input callback */
+var _lightPasses = function(x, y) {
+	var key = x+","+y;
+	if (key in Game.map) { 
+		return (Game.map[key].character === Game.tiles.floor.character ||
+		 Game.map[key].character === Game.tiles.box.character || 
+		 Game.map[key].character === Game.tiles.stair.character); 
+	}
+	return false;
+}
+
+//to be called before changing x/y in order to remove existing fov
+Player.prototype._removeFov = function() {
+	var fov = new ROT.FOV.PreciseShadowcasting(_lightPasses);
+
+	/* output callback */
+	fov.compute(this._x, this._y, this.visibility, function(x, y, r, visibility) {
+		var key = x + "," + y;
+		var character = Game.map[key].character
+		var tile = _.find(Game.tiles, function(t) {
+			return t.character === character;
+		});
+		var other = _.find(Game.others, function(other) {
+			return (x === other.getX() && y === other.getY());
+		});
+
+		var ch;
+		var color;
+		if (other) {
+			ch = Game.tiles.player.character;
+		} else {
+			ch = (r ? tile.character : Game.tiles.player.character);
+		}
+		Game.display.draw(x, y, ch, "#555");
+	});
 };
 
 Player.prototype._fov = function() {
-	/* input callback */
-	var lightPasses = function(x, y) {
-		var key = x+","+y;
-		if (key in Game.map) { 
-			return (Game.map[key].character === Game.tiles.floor.character ||
-			 Game.map[key].character === Game.tiles.box.character || 
-			 Game.map[key].character === Game.tiles.stair.character); 
-		}
-		return false;
-	}
-
-	var fov = new ROT.FOV.PreciseShadowcasting(lightPasses);
+	var fov = new ROT.FOV.PreciseShadowcasting(_lightPasses);
 
 	/* output callback */
 	fov.compute(this._x, this._y, this.visibility, function(x, y, r, visibility) {
@@ -64,6 +87,7 @@ Player.prototype._fov = function() {
 		Game.display.draw(x, y, ch, color);
 		Game.map[key].viewed = true;
 	});
+
 };
 
 Player.prototype._handle = function(code) {
@@ -101,15 +125,14 @@ Player.prototype._handle = function(code) {
 		return;
 	}
 
-	//Game.display.draw(this._x, this._y, Game.map[this._x+","+this._y]);
-	Game._drawWholeMap();
+	this._removeFov();
 	this._x = newX;
 	this._y = newY;
 
+	sockets.emit('move', {'x': newX, 'y': newY});
+
 	this._fov();
 	this._draw();
-
-	sockets.emit('move', {'x': newX, 'y': newY});
 };
 
 Player.prototype._check = function() {

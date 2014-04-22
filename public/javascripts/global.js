@@ -17,26 +17,20 @@ $(document).ready(function () {
 		ROT.RNG.setSeed(seed);
 		username = prompt('Whats your name?') || 'anon';
 
-		sockets.emit('getOtherUsers', username);
+		sockets.emit('confirmUsername', username);
+	});
 
-		//Game.init();
-		
-		//sockets.emit('addUser', username, Game.player.getX(), Game.player.getY(), Game.player._color);
+	sockets.on('confirmUsername', function(username){
+		username = username;
+		sockets.emit('getOtherUsers', username);
 	});
 
 	sockets.on('advance', function(msg){
 		var seed = msg.seed;
 		ROT.RNG.setSeed(seed);
 		Game.clear();
-		//Game.init();
 		
-		sockets.emit('getOtherUsers', username);
-		//sockets.emit('addUser', username, Game.player.getX(), Game.player.getY(), Game.player._color);
-	});
-
-	sockets.on('addUser', function(msg) {
-		var otherPlayer = new Player(msg.username, msg.x, msg.y, msg.color);
-		Game.others[msg.username] = otherPlayer;
+		sockets.emit('getOtherUsers');
 	});
 
 	sockets.on('others', function(others) {
@@ -47,8 +41,14 @@ $(document).ready(function () {
 
 		Game.init();
 
-		sockets.emit('addUser', username, Game.player.getX(), Game.player.getY(), Game.player._color);
+		sockets.emit('addUser', Game.player.getX(), Game.player.getY(), Game.player._color);
 	});
+
+	sockets.on('addUser', function(msg) {
+		var otherPlayer = new Player(msg.username, msg.x, msg.y, msg.color);
+		Game.others[msg.username] = otherPlayer;
+	});
+
 
 	sockets.on('move', function(msg) {
 		var username = msg.u;

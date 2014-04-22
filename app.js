@@ -66,11 +66,7 @@ app.get('/:world', function(req, res) {
 var dimensions = {1397772122914: [1397772122914], 97623758228496: [97623758228496, 63119805283845]};
 var users = {};
 
-io.on('connection', function(socket){
-
-	socket.on('event', function(data){
-		console.log('event: ' + data);
-	});
+io.on('connection', function(socket) {
 
 	socket.on('finishLevel', function() {
 		//Pick the next level (or generate it) from the 2d dimensions array
@@ -121,19 +117,29 @@ io.on('connection', function(socket){
 		socket.emit('init', {seed: world});	
 	});
 
-	socket.on('getOtherUsers', function(username) {
+	socket.on('confirmUsername', function(potentialUsername) {
+		//is this an alreasdy existing username?
+		var username = potentialUsername || "";
+		while (username === "" || _un.indexOf(_un.keys(users), username) !== -1) {
+			if (username === "" || _un.indexOf(_un.keys(users), username) !== -1) {
+				username += Math.ceil(Math.random()*10);
+			}
+		}
+		socket.username = username;
+		socket.emit('confirmUsername', username);
+	});
+
+	socket.on('getOtherUsers', function() {
 		//send all existing users in the world to the new player
 		var others = _un.filter(users, function(user) {
-			return (user.world === socket.world && user.username !== username);
+			return (user.world === socket.world && user.username !== socket.username);
 		});
 		socket.emit('others', others);
 	});
 
-	socket.on('addUser', function(username, x, y, color) {
-		socket.username = username;
-		var newPlayer = {"username": username, "x": x, "y": y, "color": color, "world": socket.world};
-		users[username] = newPlayer;
-
+	socket.on('addUser', function(x, y, color) {
+		var newPlayer = {"username": socket.username, "x": x, "y": y, "color": color, "world": socket.world};
+		users[socket.username] = newPlayer;
 		socket.broadcast.to(socket.world).emit('addUser', newPlayer);
 	});
 

@@ -6,6 +6,8 @@ var Game = {
 	engine: null,
 	scheduler: null,
 	stair: null,
+	displayWidth: 80,
+	displayHeight: 25,
 	tiles: {
 		"stair": {"color": "#fff", "character": "⇓"},
 		"floor": {"color": "#f7bf8f", "character": "."},
@@ -19,7 +21,7 @@ var Game = {
 		this.stair = null;
 	},
 	init: function() {
-		this.display = new ROT.Display();
+		this.display = new ROT.Display(this.displayWidth, this.displayHeight);
 		var can = document.body.getElementsByTagName('canvas')[0];
 		if (can !== undefined) {
 			document.body.removeChild(can);
@@ -33,7 +35,6 @@ Game._generateMap = function() {
 	var freeCells = [];
 	var digger = new ROT.Map.Digger();
 	var digCallback = function(x, y, value) {
-		//if (value) { return; } //we aren't storing walls.. yet!
 		if (!value) {
 			var key = x+","+y;
 			freeCells.push(key);
@@ -118,3 +119,28 @@ Game.removePlayer = function(username) {
 	Game.display.draw(player.getX(), player.getY(), Game.map[key].character, color);
 	delete Game.others[username];
 };
+
+//x, y are in game grid co-ordinates
+Game.drawLabel = function(text, x, y) {
+	var can = document.getElementsByTagName('canvas')[0];
+	var ctx = Game.display._context;
+	var oldFont = ctx.font;
+	var oldFill = ctx.fillStyle;
+	var oldAlign = ctx.textAlign;
+	var oldBaseline = ctx.textBaseline;
+
+	ctx.textAlign = "left"
+	ctx.font = "8px sans-serif";
+	ctx.fillStyle = "#fff";
+	ctx.textBaseline = "top";
+
+	var newX = (x + 1) * parseInt(can.getAttribute('width')) / this.displayWidth;
+	var newY = (y + 1) * parseInt(can.getAttribute('height')) / this.displayHeight;
+	ctx.fillText(text, newX, newY);
+
+	//reset styles for normal drawing
+	ctx.textBaseline = oldBaseline;
+	ctx.textAlign = oldAlign;
+	ctx.fillStyle = oldFill;
+	ctx.font = oldFont;
+}

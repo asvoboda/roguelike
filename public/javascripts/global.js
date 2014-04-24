@@ -1,6 +1,6 @@
 
-var sockets = null;
-var username = null;
+var sockets = undefined;
+var username = undefined;
 
 $(document).ready(function () {
 	sockets = io.connect();

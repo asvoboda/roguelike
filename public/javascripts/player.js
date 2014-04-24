@@ -2,7 +2,7 @@ var Player = function(username, x, y, color) {
 	//todo
 	this._x = x;
 	this._y = y;
-	this._color = color || '#'+Math.floor(Math.random()*16777215).toString(16); //the magic of 16777215=ffffff
+	this._color = color || '#' + Math.floor(Math.random()*16777215).toString(16); //the magic of 16777215=ffffff
 	this.username = username;
 	this.visibility = 8;
 	this.tick = false;
@@ -14,7 +14,7 @@ Player.prototype.getY = function() { return this._y; };
 
 Player.prototype.setX = function(x) { this._x  = x; };
 
-Player.prototype.setY = function(y) {this._y = y; };
+Player.prototype.setY = function(y) { this._y = y; };
 
 Player.prototype.getColor = function() { return this._color; };
 
@@ -93,6 +93,7 @@ Player.prototype._fov = function() {
 Player.prototype._canTick = function() {
 	var fov = new ROT.FOV.PreciseShadowcasting(_lightPasses);
 	var canTick = true;
+	var _this = this;
 
 	/* output callback */
 	fov.compute(this._x, this._y, this.visibility, function(x, y, r, visibility) {
@@ -101,7 +102,7 @@ Player.prototype._canTick = function() {
 			return (x === other.getX() && y === other.getY());
 		});
 		if (other) {
-			canTick = (other.tick && !this.tick);
+			canTick = (other.tick && !_this.tick);
 		}
 	});
 
@@ -138,6 +139,13 @@ Player.prototype._handle = function(code) {
 	var otherInWay = false;
 	_.each(Game.others, function(other) {
 		var key = other.getX() + "," + other.getY();
+		if (key === newKey) {
+			otherInWay = true;
+		}
+	});
+
+	_.each(Game.enemies, function(enemy) {
+		var key = enemy.getX() + "," + enemy.getY();
 		if (key === newKey) {
 			otherInWay = true;
 		}

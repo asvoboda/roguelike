@@ -23,24 +23,24 @@ Enemy.prototype._draw = function() {
 	Game.display.draw(this._x, this._y, Game.tiles.enemy.character, this._color);
 };
 
-//check all entities in the fov for the player
-//if they have all moved, then so can the player
-//entities outside the fov can move at will
 Enemy.prototype._canTick = function() {
 	var fov = new ROT.FOV.PreciseShadowcasting(_lightPasses);
 	var canTick = true;
+	var _this = this;
 
 	/* output callback */
 	fov.compute(this._x, this._y, this.visibility, function(x, y, r, visibility) {
 
-		var others = Game.others;
-		others.push(Game.player);
+		var others = {};
+		_.extend(others, Game.others);
+		others[Game.player.username] = Game.player;
+		//others[Game.player.username] = Game.player;
 
 		var other = _.find(others, function(other) {
 			return (x === other.getX() && y === other.getY());
 		});
 		if (other) {
-			canTick = (other.tick && !this.tick);
+			canTick = (other.tick && !_this.tick);
 		}
 	});
 
@@ -62,6 +62,11 @@ Enemy.prototype.act = function() {
 	if (!this.heading) {
 		this._findHeading();
 	}
+
+	if (!this._canTick()) {
+		return;
+	}
+
 	var parts = this.heading.split(",");
 	var x = parseInt(parts[0]);
 	var y = parseInt(parts[1]);
@@ -98,9 +103,11 @@ Enemy.prototype.act = function() {
 
 Enemy.prototype.resetTick = function() {
 	this.tick = false;
-	setTimeout(this.resetTick, Game.tickAmount);
-};
+	console.log("enemy reset tick");
+	var reset = function() {
+		this.resetTick();
+	};
+	this.act();
 
-var resetEnemyTick = function(e) {
-	this.player._handle(e.keyCode);
+	setTimeout(reset.bind(this), Game.tickAmount);
 };

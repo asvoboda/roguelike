@@ -1,12 +1,12 @@
 var Game = {
-	display: null,
+	display: undefined,
 	map: {},
-	player: null,
+	player: undefined,
 	others: {},
 	enemies: [],
-	engine: null,
-	scheduler: null,
-	stair: null,
+	engine: undefined,
+	scheduler: undefined,
+	stair: undefined,
 	displayWidth: 80,
 	displayHeight: 25,
 	tickAmount: 10000,
@@ -21,9 +21,10 @@ var Game = {
 	clear: function() {
 		this.map = {};
 		this.others = {};
-		this.stair = null;
+		this.stair = undefined;
 	},
 	init: function() {
+		this.scheduler = new ROT.Scheduler.Simple();
 		this.display = new ROT.Display(this.displayWidth, this.displayHeight);
 		var can = document.body.getElementsByTagName('canvas')[0];
 		if (can !== undefined) {
@@ -32,6 +33,7 @@ var Game = {
 		document.body.appendChild(this.display.getContainer());
 		this._generateMap();
 		resetTick();
+
 	}
 };
 
@@ -104,7 +106,7 @@ Game._createPlayer = function(freeCells) {
 	var x = parseInt(parts[0]);
 	var y = parseInt(parts[1]);
 
-	if (this.player === null) {
+	if (this.player === undefined) {
 		this.player = new Player(username, x, y, undefined);
 	} else {
 		this.player = new Player(username, x, y, this.player.getColor());
@@ -127,6 +129,7 @@ Game._createEnemy = function(freeCells) {
 	var y = parseInt(parts[1]);
 
 	var enemy = new Enemy(username, x, y, this.player.getColor());
+	enemy.resetTick();
 	Game.enemies.push(enemy);
 }
 

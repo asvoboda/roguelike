@@ -64,8 +64,9 @@ app.get('/:world', function(req, res) {
 	res.render('index.jade', {world: translated});
 });
 
-var dimensions = {1397772122914: [1397772122914], 97623758228496: [97623758228496, 63119805283845]};
-var users = {};
+//var dimensions = {1397772122914: [1397772122914], 97623758228496: [97623758228496, 63119805283845]};
+var dimensions = {97623758228496: [97623758228496, 63119805283845]};
+var entities = {};
 
 io.on('connection', function(socket) {
 
@@ -121,8 +122,8 @@ io.on('connection', function(socket) {
 	socket.on('confirmUsername', function(potentialUsername) {
 		//is this an alreasdy existing username?
 		var username = potentialUsername || "";
-		while (username === "" || _un.indexOf(_un.keys(users), username) !== -1) {
-			if (username === "" || _un.indexOf(_un.keys(users), username) !== -1) {
+		while (username === "" || _un.indexOf(_un.keys(entities), username) !== -1) {
+			if (username === "" || _un.indexOf(_un.keys(entities), username) !== -1) {
 				username += Math.ceil(Math.random()*10);
 			}
 		}
@@ -130,34 +131,39 @@ io.on('connection', function(socket) {
 		socket.emit('confirmUsername', username);
 	});
 
-	socket.on('getOtherUsers', function() {
+	socket.on('getOthers', function() {
 		//send all existing users in the world to the new player
-		var others = _un.filter(users, function(user) {
+		var others = _un.filter(entities, function(user) {
 			return (user.world === socket.world && user.username !== socket.username);
 		});
 		socket.emit('others', others);
 	});
 
 	socket.on('addUser', function(x, y, color) {
-		var newPlayer = {"username": socket.username, "x": x, "y": y, "color": color, "world": socket.world};
-		users[socket.username] = newPlayer;
-		socket.broadcast.to(socket.world).emit('addUser', newPlayer);
+		var newEntity = {"username": socket.username, "x": x, "y": y, "color": color, "world": socket.world, "user": true};
+		entities[socket.username] = newEntity;
+		socket.broadcast.to(socket.world).emit('addUser', newEntity);
 	});
+
+	socket.on('addEnemy', function(username, x, y, color) {
+		var newEntity = {"username": username, "x": x, "y": y, "color": color, "world": socket.world, "user": false};
+		entities[username] = newEntity;
+	})
 
 	socket.on('move', function(data) {
 		//update current position on server
-		var player = users[socket.username];
-		player.x = data.x;
-		player.y = data.y
-		player.tick = data.t;
-		users[socket.username] = player;
+		var entity = entities[data.u];
+		entity.x = data.x;
+		entity.y = data.y
+		entity.h = data.h;
+		entities[data.u] = entity;
 		//broadcast information to rest of players in world
-		io.sockets.in(socket.world).emit('move', {"u": socket.username, "x": data.x, "y": data.y, "t": data.t});
+		io.sockets.in(socket.world).emit('move', {"u": data.u, "x": data.x, "y": data.y, "h": data.h, "t": data.t});
 	});
 
 	socket.on('disconnect', function(){
 		console.log('disconnect');
-		delete users[socket.username];
+		delete entities[socket.username];
 		io.sockets.in(socket.world).emit('disconnect', socket.username);
 		socket.leave(socket.world);
 	});

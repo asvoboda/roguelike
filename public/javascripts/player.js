@@ -1,29 +1,25 @@
 var Player = function(username, x, y, color) {
-	//todo
-	this._x = x;
-	this._y = y;
-	this._color = color || '#' + Math.floor(Math.random()*16777215).toString(16); //the magic of 16777215=ffffff
-	this.username = username;
-	this.visibility = 8;
-	this.tick = false;
+	Entity.call(this, username, x, y, color);
 };
 
-Player.prototype.getX = function() { return this._x; };
-
-Player.prototype.getY = function() { return this._y; };
-
-Player.prototype.setX = function(x) { this._x  = x; };
-
-Player.prototype.setY = function(y) { this._y = y; };
-
-Player.prototype.getColor = function() { return this._color; };
+Player.prototype = Object.create(Entity.prototype);
 
 Player.prototype._draw = function() {
 	Game.display.draw(this._x, this._y, Game.tiles.player.character, this._color);
 };
 
 Player.prototype.act = function() {
-};
+    Game.engine.lock();
+    /* wait for user input; do stuff when user hits a key */
+	var movementCallback = function(e) {
+		this._handle(e.keyCode);
+	};
+	var enterCallback = function(e) {
+		this._check();
+	};
+	Mousetrap.bind(["up", "right", "down", "left"], movementCallback.bind(this));
+	Mousetrap.bind("enter", enterCallback.bind(this));
+}
 
 /* input callback */
 var _lightPasses = function(x, y) {
@@ -41,7 +37,7 @@ Player.prototype._removeFov = function() {
 	var fov = new ROT.FOV.PreciseShadowcasting(_lightPasses);
 
 	/* output callback */
-	fov.compute(this._x, this._y, this.visibility, function(x, y, r, visibility) {
+	fov.compute(this._x, this._y, this._visibility, function(x, y, r, visibility) {
 		var key = x + "," + y;
 		var character = Game.map[key].character
 		var tile = _.find(Game.tiles, function(t) {
@@ -49,7 +45,7 @@ Player.prototype._removeFov = function() {
 		});
 
 		var ch = (r ? tile.character : Game.tiles.player.character);
-		Game.display.draw(x, y, ch, "#555");
+		Game.display.draw(x, y, ch, Game.viewedColor);
 	});
 };
 
@@ -57,7 +53,7 @@ Player.prototype._fov = function() {
 	var fov = new ROT.FOV.PreciseShadowcasting(_lightPasses);
 
 	/* output callback */
-	fov.compute(this._x, this._y, this.visibility, function(x, y, r, visibility) {
+	fov.compute(this._x, this._y, this._visibility, function(x, y, r, visibility) {
 		var key = x + "," + y;
 		var character = Game.map[key].character
 		var tile = _.find(Game.tiles, function(t) {
@@ -87,28 +83,6 @@ Player.prototype._fov = function() {
 	});
 };
 
-//check all entities in the fov for the player
-//if they have all moved, then so can the player
-//entities outside the fov can move at will
-Player.prototype._canTick = function() {
-	var fov = new ROT.FOV.PreciseShadowcasting(_lightPasses);
-	var canTick = true;
-	var _this = this;
-
-	/* output callback */
-	fov.compute(this._x, this._y, this.visibility, function(x, y, r, visibility) {
-
-		var other = _.find(Game.others, function(other) {
-			return (x === other.getX() && y === other.getY());
-		});
-		if (other) {
-			canTick = (other.tick && !_this.tick);
-		}
-	});
-
-	return canTick;
-};
-
 Player.prototype._handle = function(code) {
 	var keyMap = {};
 	keyMap[38] = 0;
@@ -129,10 +103,6 @@ Player.prototype._handle = function(code) {
 	var newKey = newX + "," + newY;
 
 	if (Game.map[newKey].character === Game.tiles.wall.character) {
-		return;
-	}
-
-	if (!this._canTick()) {
 		return;
 	}
 
@@ -158,12 +128,16 @@ Player.prototype._handle = function(code) {
 	this._removeFov();
 	this._x = newX;
 	this._y = newY;
-	this.tick = true;
 
-	sockets.emit('move', {'x': newX, 'y': newY, 't': this.tick});
+	sockets.emit('move', {'u': this._username, 'x': newX, 'y': newY});
 
 	this._fov();
 	this._draw();
+
+	
+	Mousetrap.unbind(["up", "right", "down", "left"]);
+	Mousetrap.unbind("enter");
+	Game.engine.unlock();
 };
 
 Player.prototype._check = function() {
@@ -174,8 +148,3 @@ Player.prototype._check = function() {
 		//todo: do something with boxes, doors, etc
 	}
 };
-
-var resetTick = function() {
-	Game.player.tick = false;
-	setTimeout(resetTick, Game.tickAmount);
-}

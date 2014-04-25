@@ -1,50 +1,12 @@
-var Enemy = function(name, x, y, color) {
-	//todo
-	this._x = x;
-	this._y = y;
-	this._color = color || '#' + Math.floor(Math.random()*16777215).toString(16); //the magic of 16777215=ffffff
-	this.name = name;
-	this.visibility = 8;
-	this.tick = false;
+var Enemy = function(username, x, y, color) {
 	this.heading = undefined;
+	Entity.call(this, username, x, y, color);
 };
 
-Enemy.prototype.getX = function() { return this._x; };
-
-Enemy.prototype.getY = function() { return this._y; };
-
-Enemy.prototype.setX = function(x) { this._x  = x; };
-
-Enemy.prototype.setY = function(y) {this._y = y; };
-
-Enemy.prototype.getColor = function() { return this._color; };
+Enemy.prototype = Object.create(Entity.prototype);
 
 Enemy.prototype._draw = function() {
 	Game.display.draw(this._x, this._y, Game.tiles.enemy.character, this._color);
-};
-
-Enemy.prototype._canTick = function() {
-	var fov = new ROT.FOV.PreciseShadowcasting(_lightPasses);
-	var canTick = true;
-	var _this = this;
-
-	/* output callback */
-	fov.compute(this._x, this._y, this.visibility, function(x, y, r, visibility) {
-
-		var others = {};
-		_.extend(others, Game.others);
-		others[Game.player.username] = Game.player;
-		//others[Game.player.username] = Game.player;
-
-		var other = _.find(others, function(other) {
-			return (x === other.getX() && y === other.getY());
-		});
-		if (other) {
-			canTick = (other.tick && !_this.tick);
-		}
-	});
-
-	return canTick;
 };
 
 Enemy.prototype._findHeading = function() {
@@ -61,10 +23,6 @@ Enemy.prototype._findHeading = function() {
 Enemy.prototype.act = function() {
 	if (!this.heading) {
 		this._findHeading();
-	}
-
-	if (!this._canTick()) {
-		return;
 	}
 
 	var parts = this.heading.split(",");
@@ -93,21 +51,10 @@ Enemy.prototype.act = function() {
 	} else {
 		x = path[0][0];
 		y = path[0][1];
-		Game.display.draw(this._x, this._y, Game.map[this._x+","+this._y].character, "#555");
+		Game.display.draw(this._x, this._y, Game.map[this._x+","+this._y].character, Game.viewedColor);
 		this._x = x;
 		this._y = y;
 		this._draw();
+		sockets.emit('move', {'u': this._username, 'x': x, 'y': y, 'h': this.heading});
 	}
-	this.tick = true;
-};
-
-Enemy.prototype.resetTick = function() {
-	this.tick = false;
-	console.log("enemy reset tick");
-	var reset = function() {
-		this.resetTick();
-	};
-	this.act();
-
-	setTimeout(reset.bind(this), Game.tickAmount);
 };

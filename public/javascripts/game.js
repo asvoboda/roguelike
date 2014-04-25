@@ -3,13 +3,15 @@ var Game = {
 	map: {},
 	player: undefined,
 	others: {},
-	enemies: [],
+	enemies: {},
 	engine: undefined,
 	scheduler: undefined,
 	stair: undefined,
 	displayWidth: 80,
 	displayHeight: 25,
 	tickAmount: 10000,
+	viewedColor: "#555",
+	unviewedColor: "#000",
 	tiles: {
 		"stair": {"color": "#fff", "character": "⇓"},
 		"floor": {"color": "#f7bf8f", "character": "."},
@@ -25,6 +27,7 @@ var Game = {
 	},
 	init: function() {
 		this.scheduler = new ROT.Scheduler.Simple();
+		this.engine = new ROT.Engine(this.scheduler);
 		this.display = new ROT.Display(this.displayWidth, this.displayHeight);
 		var can = document.body.getElementsByTagName('canvas')[0];
 		if (can !== undefined) {
@@ -32,8 +35,7 @@ var Game = {
 		}
 		document.body.appendChild(this.display.getContainer());
 		this._generateMap();
-		resetTick();
-
+		this.engine.start();
 	}
 };
 
@@ -65,8 +67,14 @@ Game._generateMap = function() {
 
 	this._createPlayer(freeCells);
 
-	for(var i = 0; i < 1; i++) {
-		this._createEnemy(freeCells);
+	if (_.size(this.enemies) === 0) {
+		for(var i = 0; i < 1; i++) {
+			this._createEnemy(freeCells);
+		}
+	} else {
+		for(var key in this.enemies) {
+			this.scheduler.add(this.enemies[key], true);
+		}
 	}
 
 	this._drawWholeMap();
@@ -79,7 +87,7 @@ Game._drawWholeMap = function() {
 		var parts = key.split(",");
 		var x = parseInt(parts[0]);
 		var y = parseInt(parts[1]);
-		var color = this.map[key].viewed ? "#555" : "#000";
+		var color = this.map[key].viewed ? this.viewedColor : this.unviewedColor;
 		this.display.draw(x, y, this.map[key].character, color);
 	}
 };
@@ -107,18 +115,11 @@ Game._createPlayer = function(freeCells) {
 	var y = parseInt(parts[1]);
 
 	if (this.player === undefined) {
-		this.player = new Player(username, x, y, undefined);
+		this.player = new Player(username, x, y);
 	} else {
 		this.player = new Player(username, x, y, this.player.getColor());
 	}
-	var movementCallback = function(e) {
-		this.player._handle(e.keyCode);
-	};
-	var enterCallback = function(e) {
-		this.player._check();
-	};
-	Mousetrap.bind(["up", "right", "down", "left"], movementCallback.bind(this));
-	Mousetrap.bind("enter", enterCallback.bind(this));
+	this.scheduler.add(this.player, true);
 };
 
 Game._createEnemy = function(freeCells) {
@@ -128,41 +129,18 @@ Game._createEnemy = function(freeCells) {
 	var x = parseInt(parts[0]);
 	var y = parseInt(parts[1]);
 
-	var enemy = new Enemy(username, x, y, this.player.getColor());
-	enemy.resetTick();
-	Game.enemies.push(enemy);
+	var randomEnemyName = Math.random().toString(36).substr(2, 10);
+	var enemy = new Enemy(randomEnemyName, x, y);
+	this.scheduler.add(enemy, true);
+	Game.enemies[enemy.getUsername()] = enemy;
+	sockets.emit('addEnemy', enemy.getUsername(), enemy.getX(), enemy.getY(), enemy._color);
 }
 
 Game.removePlayer = function(username) {
 	var player = Game.others[username];
 	if (player === undefined) return;
 	var key = player.getX() + "," + player.getY();
-	var color = Game.map[key].viewed ? "#555" : "#000";
+	var color = Game.map[key].viewed ? this.viewedColor : this.unviewedColor;
 	Game.display.draw(player.getX(), player.getY(), Game.map[key].character, color);
 	delete Game.others[username];
 };
-
-//x, y are in game grid co-ordinates
-Game.drawLabel = function(text, x, y) {
-	var can = document.getElementsByTagName('canvas')[0];
-	var ctx = Game.display._context;
-	var oldFont = ctx.font;
-	var oldFill = ctx.fillStyle;
-	var oldAlign = ctx.textAlign;
-	var oldBaseline = ctx.textBaseline;
-
-	ctx.textAlign = "left"
-	ctx.font = "8px sans-serif";
-	ctx.fillStyle = "#fff";
-	ctx.textBaseline = "top";
-
-	var newX = (x + 1) * parseInt(can.getAttribute('width')) / this.displayWidth;
-	var newY = (y + 1) * parseInt(can.getAttribute('height')) / this.displayHeight;
-	ctx.fillText(text, newX, newY);
-
-	//reset styles for normal drawing
-	ctx.textBaseline = oldBaseline;
-	ctx.textAlign = oldAlign;
-	ctx.fillStyle = oldFill;
-	ctx.font = oldFont;
-}

@@ -22,7 +22,7 @@ $(document).ready(function () {
 
 	sockets.on('confirmUsername', function(username){
 		username = username;
-		sockets.emit('getOtherUsers', username);
+		sockets.emit('getOthers', username);
 	});
 
 	sockets.on('advance', function(msg){
@@ -30,13 +30,19 @@ $(document).ready(function () {
 		ROT.RNG.setSeed(seed);
 		Game.clear();
 		
-		sockets.emit('getOtherUsers');
+		sockets.emit('getOthers');
 	});
 
 	sockets.on('others', function(others) {
 		_.each(others, function(properties) {
-			var otherPlayer = new Player(properties.username, properties.x, properties.y, properties.color);
-			Game.others[otherPlayer.username] = otherPlayer;
+			if (properties.user) {
+				var otherPlayer = new Player(properties.username, properties.x, properties.y, properties.color);
+				Game.others[otherPlayer.getUsername()] = otherPlayer;
+			} else {
+				var enemy = new Enemy(properties.username, properties.x, properties.y, properties.color);
+				Game.enemies[properties.username] = enemy;
+				//Game.scheduler.add(enemy, true);
+			}
 		});
 
 		Game.init();
@@ -53,14 +59,20 @@ $(document).ready(function () {
 	sockets.on('move', function(msg) {
 		var username = msg.u;
 		var player = Game.others[username];
-		if (player === undefined) return;
-		player.setX(msg.x);
-		player.setY(msg.y);
-		player.tick = msg.t;
+		var enemy = Game.enemies[username];
+		if(player !== undefined) {
+			player.setX(msg.x);
+			player.setY(msg.y);
 
-		//only draw the fov for the person who is playing
-		Game.player._fov();
-		Game.others[player.username] = player;
+			//only draw the fov for the person who is playing
+			Game.player._fov();
+			Game.others[player.getUsername()] = player;
+		} else if (enemy !== undefined) {
+			enemy.setX(msg.x);
+			enemy.setY(msg.y);
+			Game.player._fov();
+			Game.enemies[enemy.getUsername()] = enemy;
+		}
 	});
 
 	sockets.on('disconnect', function(username) {

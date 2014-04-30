@@ -23,6 +23,7 @@ var Game = {
 	clear: function() {
 		this.map = {};
 		this.others = {};
+		this.enemies = {};
 		this.stair = undefined;
 	},
 	init: function() {

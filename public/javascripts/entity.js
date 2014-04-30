@@ -2,7 +2,7 @@ var Entity = function(username, x, y, color) {
 	this._username = username;
 	this._x = x;
 	this._y = y;
-	this._color = color || '#' + Math.floor(Math.random()*16777215).toString(16); //the magic of 16777215=ffffff
+	this._color = color || generateColor();
 	this._visibility = 8;
 };
 

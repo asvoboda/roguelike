@@ -32,7 +32,8 @@ Enemy.prototype.act = function() {
 	var passableCallback = function(x, y) {
 		var key = x + "," + y;
 		return (Game.map[key].character === Game.tiles.floor.character ||
-				Game.map[key].character === Game.tiles.box.character);
+				Game.map[key].character === Game.tiles.box.character ||
+				Game.map[key].character === Game.tiles.stair.character);
 	};
 	var astar = new ROT.Path.AStar(x, y, passableCallback, {topology: 4});
 
@@ -51,10 +52,10 @@ Enemy.prototype.act = function() {
 	} else {
 		x = path[0][0];
 		y = path[0][1];
-		Game.display.draw(this._x, this._y, Game.map[this._x+","+this._y].character, Game.viewedColor);
+		//Game.display.draw(this._x, this._y, Game.map[this._x+","+this._y].character, Game.viewedColor);
 		this._x = x;
 		this._y = y;
-		this._draw();
+		//this._draw();
 		sockets.emit('move', {'u': this._username, 'x': x, 'y': y, 'h': this.heading});
 	}
 };

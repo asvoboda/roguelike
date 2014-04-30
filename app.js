@@ -64,8 +64,8 @@ app.get('/:world', function(req, res) {
 	res.render('index.jade', {world: translated});
 });
 
-//var dimensions = {1397772122914: [1397772122914], 97623758228496: [97623758228496, 63119805283845]};
-var dimensions = {97623758228496: [97623758228496, 63119805283845]};
+var dimensions = {1397772122914: [1397772122914], 97623758228496: [97623758228496, 63119805283845]};
+//var dimensions = {97623758228496: [97623758228496, 63119805283845]};
 var entities = {};
 
 io.on('connection', function(socket) {
